@@ -12,6 +12,8 @@ def log(message):
 
 
 
+
+
 # Vérification des arguments
 if len(sys.argv) != 3:
     log("❌ Mauvais nombre d'arguments")

@@ -9,6 +9,7 @@ import os
 def log(message):
     with open("log.txt", "a", encoding="utf-8") as f:
         f.write(message + "\n")
+        
 
 # Vérification des arguments
 if len(sys.argv) != 3:

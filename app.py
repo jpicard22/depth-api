@@ -27,8 +27,10 @@ def depth():
         result = subprocess.run(
             ['python', 'depth.py', input_path, output_path],
             capture_output=True,
-            text=True
+            text=True,
+            timeout=300  # Par exemple, augmente le délai à 300 secondes (5 minutes)
         )
+
 
         if result.returncode != 0:
             return f"Erreur lors du traitement : {result.stderr}", 500

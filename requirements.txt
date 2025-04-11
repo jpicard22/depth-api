@@ -1,0 +1,9 @@
+torch
+torchvision
+opencv-python
+tqdm
+flask
+Pillow
+matplotlib
+gunicorn
+

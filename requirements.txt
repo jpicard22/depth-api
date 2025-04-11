@@ -6,7 +6,5 @@ flask
 Pillow
 matplotlib
 gunicorn
-numpy
-
 
 

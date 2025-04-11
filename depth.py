@@ -39,6 +39,7 @@ transform = transforms.Compose([
 try:
     # Ouverture de l'image d'entrée
     img = Image.open(input_path)
+    img = img.resize((640, 480))  # Redimensionner l'image pour le traitement
 
     # Appliquer la transformation (normalisation à 255)
     img_input = transform(img).unsqueeze(0)  # Ajouter une dimension pour le batch

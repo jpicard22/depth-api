@@ -5,6 +5,7 @@ tqdm
 flask
 Pillow
 matplotlib
-gunicorn
+waitress
+
 
 

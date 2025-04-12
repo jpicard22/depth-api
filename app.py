@@ -1,44 +1,31 @@
-from flask import Flask, request, send_file
-import os
+from flask import Flask, request, jsonify
 import subprocess
-import uuid
+import os
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = "uploads"
-PROCESSED_FOLDER = "processed"
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
-
 @app.route("/depth", methods=["POST"])
 def depth():
-    if 'image' not in request.files:
-        return "Aucune image envoyée", 400
+    data = request.get_json()
+    filename = data.get("filename")
 
-    img_file = request.files['image']
-    img_id = str(uuid.uuid4())
-    input_path = os.path.join(UPLOAD_FOLDER, f"{img_id}.jpg")
-    output_path = os.path.join(PROCESSED_FOLDER, f"{img_id}_depth.png")
+    if not filename:
+        return jsonify({"error": "No filename provided"}), 400
 
-    img_file.save(input_path)
+    # Lance le script Python en arrière-plan
+    command = ["python3", "depth.py", filename]
+    subprocess.Popen(command)
 
-    try:
-        result = subprocess.run(
-            ['python', 'depth.py', input_path, output_path],
-            capture_output=True,
-            text=True,
-            timeout=300  # Par exemple, augmente le délai à 300 secondes (5 minutes)
-        )
+    return jsonify({"message": f"Traitement lancé pour {filename}"})
 
 
-        if result.returncode != 0:
-            return f"Erreur lors du traitement : {result.stderr}", 500
+@app.route("/check/<filename>", methods=["GET"])
+def check_file(filename):
+    output_path = os.path.join("public", "processed", filename)
+    exists = os.path.exists(output_path)
+    return jsonify({"ready": exists})
 
-        return send_file(output_path, mimetype='image/png')
-
-    except Exception as e:
-        return f"Erreur serveur : {str(e)}", 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    from waitress import serve
+    serve(app, host='0.0.0.0', port=10000)

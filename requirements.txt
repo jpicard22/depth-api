@@ -1,11 +1,4 @@
-torch
-torchvision
-opencv-python
-tqdm
-flask
-Pillow
-matplotlib
-waitress
-
-
-
+Flask==2.1.1
+torch==1.11.0
+opencv-python==4.5.5.62
+waitress==2.1.2

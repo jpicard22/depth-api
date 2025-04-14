@@ -17,7 +17,9 @@ input_path = sys.argv[1]
 output_path = sys.argv[2]
 
 log("Chargement du modèle MiDaS...")
-model = torch.hub.load("intel-isl/MiDaS", "DPT_Hybrid", pretrained=True)
+
+model =  torch.hub.load("intel-isl/MiDaS", "DPT_Hybrid", pretrained=True)
+# model = torch.hub.load("intel-isl/MiDaS", "DPT_Large", pretrained=True)
 model.eval()
 
 transform = transforms.Compose([
@@ -27,8 +29,7 @@ transform = transforms.Compose([
 
 try:
     img = Image.open(input_path)
-    img = img.resize((640, 480))
-    img_input = transform(img).unsqueeze(0)
+    img = img.resize((640, 480))  # Redimensionner l'image pour le traitement
 
     with torch.no_grad():
         depth_map = model(img_input)

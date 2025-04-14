@@ -3,4 +3,5 @@ services:
     name: depth-api
     runtime: python
     buildCommand: ""
+    startCommand: "python app.py"
     plan: free

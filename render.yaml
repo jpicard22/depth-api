@@ -2,6 +2,6 @@ services:
   - type: web
     name: depth-api
     runtime: python
-    buildCommand: "pip install -r requirements.txt"
+    buildCommand: ""
     startCommand: "waitress-serve --port=10000 app:app"
     plan: free

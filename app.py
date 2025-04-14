@@ -11,7 +11,7 @@ PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-@app.route("/depth", methods=["POST"])
+@app.route("/", methods=["POST"])
 def depth():
     if 'image' not in request.files:
         return "Aucune image envoyée", 400

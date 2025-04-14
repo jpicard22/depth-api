@@ -2,10 +2,9 @@ import os
 import sys
 import torch
 import cv2
-import urllib.request
 import numpy as np
 from flask import Flask, request, jsonify
-from torchvision.transforms import Compose, Resize, ToTensor
+from torchvision.transforms import Compose
 from PIL import Image
 
 # Initialisation Flask
@@ -21,22 +20,19 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 midas.to(device)
 
 midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
-
-if model_type == "DPT_Large" or model_type == "DPT_Hybrid":
-    transform = midas_transforms.dpt_transform
-else:
-    transform = midas_transforms.small_transform
-
+transform = midas_transforms.dpt_transform if model_type in ["DPT_Large", "DPT_Hybrid"] else midas_transforms.small_transform
 print("✅ Modèle chargé avec succès", file=sys.stderr)
 
-# 🔁 Route principale de test
+# ✅ Route de test GET
 @app.route("/", methods=["GET"])
-def index():
+def home():
     return jsonify({"message": "API MiDaS opérationnelle 🚀"})
 
+# ✅ Route POST pour traitement image
 @app.route("/", methods=["POST"])
-def index():
-    return jsonify({"message": "Hello from MiDaS API!"})
+def predict_depth():
+    if "image" not in request.files:
+        return jsonify({"error": "Aucune image fournie"}), 400
 
     file = request.files["image"]
     img = Image.open(file.stream).convert("RGB")
@@ -58,6 +54,7 @@ def index():
 
     return buffer.tobytes(), 200, {"Content-Type": "image/png"}
 
+# ✅ Lancement avec Railway
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     print(f"✅ PORT Railway = {port}", file=sys.stderr)

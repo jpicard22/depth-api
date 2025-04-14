@@ -1,7 +1,8 @@
-flask
 torch
 torchvision
-opencv-python-headless
+opencv-python
+tqdm
+flask
 Pillow
-numpy
-timm
+matplotlib
+gunicorn

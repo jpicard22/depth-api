@@ -1,60 +1,42 @@
+from flask import Flask, request, send_file
 import os
-import sys
-import torch
-import cv2
-import numpy as np
-from flask import Flask, request, jsonify, send_file
-from torchvision.transforms import Compose, Resize, ToTensor
-from PIL import Image
-from io import BytesIO
+import subprocess
+import uuid
 
-# Initialisation Flask
 app = Flask(__name__)
 
-# 🔄 Préchargement du modèle MiDaS
-print("⏳ Chargement du modèle MiDaS...", file=sys.stderr)
-model_type = "DPT_Large"
-midas = torch.hub.load("intel-isl/MiDaS", model_type)
-midas.eval()
+UPLOAD_FOLDER = "uploads"
+PROCESSED_FOLDER = "processed"
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-midas.to(device)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
-transform = midas_transforms.dpt_transform if model_type in ["DPT_Large", "DPT_Hybrid"] else midas_transforms.small_transform
+@app.route("/depth", methods=["POST"])
+def depth():
+    if 'image' not in request.files:
+        return "Aucune image envoyée", 400
 
-print("✅ Modèle chargé avec succès", file=sys.stderr)
+    img_file = request.files['image']
+    img_id = str(uuid.uuid4())
+    input_path = os.path.join(UPLOAD_FOLDER, f"{img_id}.jpg")
+    output_path = os.path.join(PROCESSED_FOLDER, f"{img_id}_depth.png")
 
-@app.route("/", methods=["GET"])
-def ping():
-    return jsonify({"message": "API MiDaS opérationnelle 🚀"})
+    img_file.save(input_path)
 
-@app.route("/", methods=["POST"])
-def predict():
-    if "image" not in request.files:
-        return jsonify({"error": "Aucune image reçue"}), 400
+    try:
+        result = subprocess.run(
+            ['python', 'depth.py', input_path, output_path],
+            capture_output=True,
+            text=True
+        )
 
-    file = request.files["image"]
-    img = Image.open(file.stream).convert("RGB")
-    input_image = transform(img).to(device)
+        if result.returncode != 0:
+            return f"Erreur lors du traitement : {result.stderr}", 500
 
-    with torch.no_grad():
-        prediction = midas(input_image.unsqueeze(0))
-        prediction = torch.nn.functional.interpolate(
-            prediction.unsqueeze(1),
-            size=img.size[::-1],
-            mode="bicubic",
-            align_corners=False
-        ).squeeze()
+        return send_file(output_path, mimetype='image/png')
 
-    depth_map = prediction.cpu().numpy()
-    depth_map_normalized = cv2.normalize(depth_map, None, 0, 255, cv2.NORM_MINMAX)
-    depth_map_uint8 = depth_map_normalized.astype(np.uint8)
-    _, buffer = cv2.imencode(".png", depth_map_uint8)
-
-    return send_file(BytesIO(buffer.tobytes()), mimetype="image/png")
+    except Exception as e:
+        return f"Erreur serveur : {str(e)}", 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    print(f"✅ Lancement sur le port {port}", file=sys.stderr)
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=10000)

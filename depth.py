@@ -1,51 +1,60 @@
-from flask import Flask, request, jsonify, send_file
+import sys
+import torch
+from torchvision import transforms
+from PIL import Image
+import matplotlib.pyplot as plt
 import os
-import uuid
-import subprocess
 
-app = Flask(__name__)
+# Fonction de log avec encodage UTF-8 pour gérer les caractères spéciaux
+def log(message):
+    with open("log.txt", "a", encoding="utf-8") as f:
+        f.write(message + "\n")
 
-UPLOAD_FOLDER = "uploads"
-PROCESSED_FOLDER = "processed"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+# Vérification des arguments
+if len(sys.argv) != 3:
+    log("❌ Mauvais nombre d'arguments")
+    sys.exit(1)
 
-@app.route("/", methods=["GET"])
-def home():
-    return "✅ API MiDaS Depth fonctionne."
+input_path = sys.argv[1]
+output_path = sys.argv[2]
 
-@app.route("/", methods=["POST"])
-def process_image():
-    if 'image' not in request.files:
-        return jsonify({"error": "Aucune image reçue."}), 400
+# Chargement du modèle MiDaS
+log("Chargement du modèle MiDaS...")
+model =  torch.hub.load("intel-isl/MiDaS", "DPT_Hybrid", pretrained=True)
+model.eval()
 
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({"error": "Nom de fichier vide."}), 400
+# Transformation des images
+transform = transforms.Compose([
+    transforms.Resize(384),  # On redimensionne à 384 pour améliorer la qualité
+    transforms.ToTensor(),  # Convertir en tensor
+])
 
-    # Noms de fichiers uniques
-    unique_id = str(uuid.uuid4())
-    input_path = os.path.join(UPLOAD_FOLDER, f"{unique_id}.jpg")
-    output_path = os.path.join(PROCESSED_FOLDER, f"{unique_id}.png")
+# transform = transforms.Compose([
+#     transforms.Resize(384),  # Redimensionner l'image (384x384 pour ce modèle)
+#     transforms.ToTensor(),   # Convertir en tensor
+#     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),  # Normalisation pour le modèle
+# ])
 
-    try:
-        # Sauvegarde du fichier uploadé
-        file.save(input_path)
 
-        # Appel du script depth.py avec subprocess
-        result = subprocess.run(
-            ["python3", "depth.py", input_path, output_path],
-            capture_output=True,
-            text=True
-        )
+try:
+    # Ouverture de l'image d'entrée
+    img = Image.open(input_path)
 
-        if result.returncode != 0:
-            return jsonify({"error": "Erreur du script", "details": result.stderr}), 500
+    # Appliquer la transformation (normalisation à 255)
+    img_input = transform(img).unsqueeze(0)  # Ajouter une dimension pour le batch
 
-        return send_file(output_path, mimetype='image/png')
+    # Calcul de la carte de profondeur
+    with torch.no_grad():
+        depth_map = model(img_input)
 
-    except Exception as e:
-        return jsonify({"error": "Exception côté serveur", "details": str(e)}), 500
+    # Sauvegarder la carte de profondeur en niveaux de gris
+    depth_map = depth_map.squeeze().cpu().numpy()
+    plt.imsave(output_path, depth_map, cmap='gray')  # Utilisation de 'gray' pour les niveaux de gris
+    # depth_map = cv2.normalize(depth_map, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+
+    log(f"✅ Carte de profondeur générée avec succès : {output_path}")
+
+except Exception as e:
+    log(f"❌ Erreur lors du traitement de l'image : {str(e)}")
+    sys.exit(1)

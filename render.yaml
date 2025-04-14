@@ -4,4 +4,4 @@ services:
     runtime: python
     plan: free
     buildCommand: ""
-    startCommand: waitress-serve --port=$PORT app:app
+    startCommand: bidule-serve --port=$PORT app:app

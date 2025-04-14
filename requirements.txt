@@ -1,5 +1,5 @@
-Flask
+flask
 torch
 torchvision
-Pillow
+pillow
 matplotlib

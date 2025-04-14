@@ -15,11 +15,10 @@ def depth():
     input_path = os.path.join("public", "uploads", filename)
     output_path = os.path.join("public", "processed", filename)
 
-    command = ["python3", "depth.py", input_path, output_path]
+    command = ["python", "depth.py", input_path, output_path]
     subprocess.Popen(command)
 
     return jsonify({"message": f"Traitement lancé pour {filename}"})
-
 
 
 @app.route("/check/<filename>", methods=["GET"])
@@ -30,5 +29,4 @@ def check_file(filename):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
+    app.run(host="0.0.0.0", port=8000)

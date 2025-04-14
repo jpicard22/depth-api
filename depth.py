@@ -17,9 +17,7 @@ input_path = sys.argv[1]
 output_path = sys.argv[2]
 
 log("Chargement du modèle MiDaS...")
-
-model =  torch.hub.load("intel-isl/MiDaS", "DPT_Hybrid", pretrained=True)
-# model = torch.hub.load("intel-isl/MiDaS", "DPT_Large", pretrained=True)
+model = torch.hub.load("intel-isl/MiDaS", "DPT_Hybrid", pretrained=True)
 model.eval()
 
 transform = transforms.Compose([
@@ -39,7 +37,6 @@ try:
     plt.imsave(output_path, depth_map, cmap='gray')
 
     log(f"✅ Carte de profondeur générée avec succès : {output_path}")
-
 except Exception as e:
-    log(f"❌ Erreur lors du traitement de l'image : {str(e)}")
+    log(f"❌ Erreur : {str(e)}")
     sys.exit(1)

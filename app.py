@@ -34,11 +34,9 @@ print("✅ Modèle chargé avec succès", file=sys.stderr)
 def index():
     return jsonify({"message": "API MiDaS opérationnelle 🚀"})
 
-# 🔄 Route pour traitement d'image
-@app.route("/predict", methods=["POST"])
-def predict():
-    if "image" not in request.files:
-        return jsonify({"error": "Aucune image reçue"}), 400
+@app.route("/", methods=["POST"])
+def index():
+    return jsonify({"message": "Hello from MiDaS API!"})
 
     file = request.files["image"]
     img = Image.open(file.stream).convert("RGB")
@@ -61,6 +59,6 @@ def predict():
     return buffer.tobytes(), 200, {"Content-Type": "image/png"}
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Railway donne le port via la variable d’environnement PORT
+    port = int(os.environ.get("PORT", 5000))
     print(f"✅ PORT Railway = {port}", file=sys.stderr)
-    app.run(host="0.0.0.0", port=port)  # ← OBLIGATOIRE pour que Railway puisse joindre le serveur
+    app.run(host="0.0.0.0", port=port)

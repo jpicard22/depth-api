@@ -1,4 +1,5 @@
-
-Flask
+flask
 torch
-opencv-python
+torchvision
+Pillow
+matplotlib

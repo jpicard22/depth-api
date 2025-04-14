@@ -8,6 +8,9 @@ import base64
 
 app = Flask(__name__)
 
+print(f"✅ PORT Railway = {os.environ.get('PORT')}", file=sys.stderr)
+
+
 # 📌 Chargement du modèle MiDaS
 midas = torch.hub.load("intel-isl/MiDaS", "MiDaS_small")
 midas.eval()

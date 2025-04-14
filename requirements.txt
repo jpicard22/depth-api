@@ -1,6 +1,6 @@
 flask
-waitress
 torch
+torchvision
 Pillow
 matplotlib
-torchvision
+render

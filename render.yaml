@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: depth-api
-    runtime: python
-    plan: free
-    buildCommand: ""
-    startCommand: python app.py

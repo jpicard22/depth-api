@@ -60,8 +60,7 @@ def predict():
 
     return buffer.tobytes(), 200, {"Content-Type": "image/png"}
 
-# 🚀 Lancement
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000))  # Railway donne le port via la variable d’environnement PORT
     print(f"✅ PORT Railway = {port}", file=sys.stderr)
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port)  # ← OBLIGATOIRE pour que Railway puisse joindre le serveur

@@ -29,7 +29,8 @@ transform = transforms.Compose([
 
 try:
     img = Image.open(input_path)
-    img = img.resize((640, 480))  # Redimensionner l'image pour le traitement
+    img = img.resize((640, 480))
+    img_input = transform(img).unsqueeze(0)
 
     with torch.no_grad():
         depth_map = model(img_input)

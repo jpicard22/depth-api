@@ -1,5 +1,6 @@
-Flask
-torch
-opencv-python
+flask
 waitress
-
+torch
+Pillow
+matplotlib
+torchvision

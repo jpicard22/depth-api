@@ -1,6 +1,6 @@
 flask
 torch
 torchvision
-matplotlib
-pillow
+opencv-python-headless
+Pillow
 timm

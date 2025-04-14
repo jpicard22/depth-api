@@ -3,5 +3,5 @@ services:
     name: depth-api
     runtime: python
     buildCommand: ""
-    startCommand: "waitress-serve --port=10000 app:app"
+    startCommand: waitress-serve --port=10000 app:app
     plan: free

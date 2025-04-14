@@ -1,42 +1,51 @@
-import sys
-import torch
-from torchvision import transforms
-from PIL import Image
-import matplotlib.pyplot as plt
+from flask import Flask, request, jsonify, send_file
 import os
+import uuid
+import subprocess
 
-def log(message):
-    with open("log.txt", "a", encoding="utf-8") as f:
-        f.write(message + "\n")
+app = Flask(__name__)
 
-if len(sys.argv) != 3:
-    log("❌ Mauvais nombre d'arguments")
-    sys.exit(1)
+UPLOAD_FOLDER = "uploads"
+PROCESSED_FOLDER = "processed"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-input_path = sys.argv[1]
-output_path = sys.argv[2]
+@app.route("/", methods=["GET"])
+def home():
+    return "✅ API MiDaS Depth fonctionne."
 
-log("Chargement du modèle MiDaS...")
-model = torch.hub.load("intel-isl/MiDaS", "DPT_Hybrid", pretrained=True)
-model.eval()
+@app.route("/", methods=["POST"])
+def process_image():
+    if 'image' not in request.files:
+        return jsonify({"error": "Aucune image reçue."}), 400
 
-transform = transforms.Compose([
-    transforms.Resize(384),
-    transforms.ToTensor(),
-])
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({"error": "Nom de fichier vide."}), 400
 
-try:
-    img = Image.open(input_path)
-    img = img.resize((640, 480))
-    img_input = transform(img).unsqueeze(0)
+    # Noms de fichiers uniques
+    unique_id = str(uuid.uuid4())
+    input_path = os.path.join(UPLOAD_FOLDER, f"{unique_id}.jpg")
+    output_path = os.path.join(PROCESSED_FOLDER, f"{unique_id}.png")
 
-    with torch.no_grad():
-        depth_map = model(img_input)
+    try:
+        # Sauvegarde du fichier uploadé
+        file.save(input_path)
 
-    depth_map = depth_map.squeeze().cpu().numpy()
-    plt.imsave(output_path, depth_map, cmap='gray')
+        # Appel du script depth.py avec subprocess
+        result = subprocess.run(
+            ["python3", "depth.py", input_path, output_path],
+            capture_output=True,
+            text=True
+        )
 
-    log(f"✅ Carte de profondeur générée avec succès : {output_path}")
-except Exception as e:
-    log(f"❌ Erreur : {str(e)}")
-    sys.exit(1)
+        if result.returncode != 0:
+            return jsonify({"error": "Erreur du script", "details": result.stderr}), 500
+
+        return send_file(output_path, mimetype='image/png')
+
+    except Exception as e:
+        return jsonify({"error": "Exception côté serveur", "details": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)

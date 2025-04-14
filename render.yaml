@@ -2,6 +2,5 @@ services:
   - type: web
     name: depth-api
     runtime: python
-    plan: free
     buildCommand: ""
-    startCommand: bidule-serve --port=$PORT app:app
+    plan: free

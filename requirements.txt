@@ -1,4 +1,3 @@
 Flask
 torch
 opencv-python
-waitress

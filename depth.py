@@ -21,6 +21,7 @@ output_path = sys.argv[2]
 # Chargement du modèle MiDaS
 log("Chargement du modèle MiDaS...")
 model =  torch.hub.load("intel-isl/MiDaS", "DPT_Hybrid", pretrained=True)
+# model = torch.hub.load("intel-isl/MiDaS", "DPT_Large", pretrained=True)
 model.eval()
 
 # Transformation des images

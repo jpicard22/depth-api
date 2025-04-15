@@ -5,3 +5,5 @@ requests
 Pillow
 transformers
 flask
+torchvision
+numpy

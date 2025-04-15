@@ -1,59 +1,49 @@
-import sys
 import torch
-import urllib
-from PIL import Image
-import matplotlib.pyplot as plt
 import cv2
-import numpy as np
 import os
+import urllib.request
+from torchvision.transforms import Compose
+from PIL import Image
+import numpy as np
 
-# Charger le modèle local MiDaS
-def load_midas_model():
-    model_path = "weights/openvino_midas_v21_small_256.bin"
-    if not os.path.exists(model_path):
-        print(f"❌ Modèle introuvable : {model_path}")
-        sys.exit(1)
+# 🔧 Chemins
+MODEL_PATH = "weights/dpt_beit_large_384.pt"
+MODEL_URL = "https://drive.google.com/uc?export=download&id=1UjDhAMJc0La1I_n7Kn_KRc8Y3hbRt4jn"
+INPUT_PATH = "public/uploads/input.jpg"
+OUTPUT_PATH = "public/processed/depth.png"
 
-    model = torch.hub.load(
-        'intel-isl/MiDaS',
-        'DPT_Large',
-        pretrained=False
-    )
-    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-    model.eval()
-    return model
+# 📥 Téléchargement du modèle si absent
+def download_model():
+    if not os.path.exists(MODEL_PATH):
+        print("📦 Téléchargement du modèle depuis Google Drive...")
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+        print("✅ Modèle téléchargé.")
 
-# Préparation de l'image
-def preprocess(image_path):
-    transform = torch.hub.load(
-        'intel-isl/MiDaS',
-        'transforms',
-        pretrained=False
-    ).dpt_transform
+download_model()
 
-    img = Image.open(image_path).convert("RGB")
-    return transform(img).unsqueeze(0)
+# 🔍 Charger modèle MiDaS avec modèle local
+model_type = "DPT_BEiT_L_384"
+model = torch.hub.load("intel-isl/MiDaS", model_type, model_path=MODEL_PATH, trust_repo=True)
+model.eval()
 
-# Main
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("❌ Usage : python depth.py <input_path> <output_path>")
-        sys.exit(1)
+# 🔧 Chargement des transforms MiDaS
+midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
+transform = midas_transforms.dpt_transform
 
-    input_path = sys.argv[1]
-    output_path = sys.argv[2]
+# 📸 Lecture de l'image
+img = Image.open(INPUT_PATH).convert("RGB")
+input_tensor = transform(img).unsqueeze(0)
 
-    try:
-        model = load_midas_model()
-        input_batch = preprocess(input_path)
+# 🔍 Prédiction de la profondeur
+with torch.no_grad():
+    prediction = model(input_tensor)
+    depth = prediction.squeeze().cpu().numpy()
 
-        with torch.no_grad():
-            prediction = model(input_batch)
-            depth_map = prediction.squeeze().cpu().numpy()
+# 🎨 Normalisation
+depth = (depth - depth.min()) / (depth.max() - depth.min())
+depth_img = (depth * 255).astype(np.uint8)
 
-        plt.imsave(output_path, depth_map, cmap='gray')
-        print("✅ Carte de profondeur enregistrée :", output_path)
-
-    except Exception as e:
-        print("❌ Erreur :", str(e))
-        sys.exit(1)
+# 💾 Sauvegarde de l’image
+cv2.imwrite(OUTPUT_PATH, depth_img)
+print("✅ Carte de profondeur générée :", OUTPUT_PATH)

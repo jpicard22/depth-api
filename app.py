@@ -1,47 +1,53 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, jsonify
 import os
-import subprocess
-import uuid
+import urllib.request
+import torch
+import cv2
+import numpy as np
+from PIL import Image
+from torchvision.transforms import Compose
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = "uploads"
-PROCESSED_FOLDER = "processed"
+MODEL_PATH = "weights/dpt_beit_large_384.pt"
+MODEL_URL = "https://drive.google.com/uc?export=download&id=1UjDhAMJc0La1I_n7Kn_KRc8Y3hbRt4jn"
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+def download_model():
+    if not os.path.exists(MODEL_PATH):
+        print("📦 Téléchargement du modèle depuis Google Drive...")
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+        print("✅ Modèle téléchargé avec succès.")
 
-@app.route("/", methods=["POST"])
-def depth():
+download_model()
+
+# Charger le modèle depuis le chemin local avec torch.hub
+model_type = "DPT_BEiT_L_384"  # pour correspondre au fichier .pt
+model = torch.hub.load("intel-isl/MiDaS", model_type, model_path=MODEL_PATH, trust_repo=True)
+model.eval()
+
+# Transformation d'image adaptée au modèle
+midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
+transform = midas_transforms.dpt_transform
+
+@app.route('/', methods=['POST'])
+def depth_map():
     if 'image' not in request.files:
-        return "Aucune image envoyée", 400
+        return jsonify({"error": "Aucune image reçue"}), 400
 
-    img_file = request.files['image']
-    img_id = str(uuid.uuid4())
-    input_path = os.path.join(UPLOAD_FOLDER, f"{img_id}.jpg")
-    output_path = os.path.join(PROCESSED_FOLDER, f"{img_id}_depth.png")
+    img = Image.open(request.files['image']).convert('RGB')
+    input_tensor = transform(img).unsqueeze(0)
 
-    img_file.save(input_path)
+    with torch.no_grad():
+        prediction = model(input_tensor)
+        depth = prediction.squeeze().cpu().numpy()
 
-    try:
-        result = subprocess.run(
-            ['python', 'depth.py', input_path, output_path],
-            capture_output=True,
-            text=True
-        )
+    # Normalisation de la carte de profondeur
+    depth = (depth - depth.min()) / (depth.max() - depth.min())
+    depth_img = (depth * 255).astype(np.uint8)
 
-         # LOG DU PROCESSUS
-        print("STDOUT:", result.stdout)
-        print("STDERR:", result.stderr)
+    _, img_encoded = cv2.imencode('.png', depth_img)
+    return img_encoded.tobytes(), 200, {'Content-Type': 'image/png'}
 
-        if result.returncode != 0:
-            return f"Erreur lors du traitement : {result.stderr}", 500
-
-        return send_file(output_path, mimetype='image/png')
-
-    except Exception as e:
-        return f"Erreur serveur : {str(e)}", 500
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))  # 🚀 ici on récupère le port de Railway
-    app.run(host="0.0.0.0", port=port)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)

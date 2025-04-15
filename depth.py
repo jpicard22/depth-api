@@ -1,55 +1,59 @@
 import sys
 import torch
-from torchvision import transforms
+import urllib
 from PIL import Image
 import matplotlib.pyplot as plt
+import cv2
+import numpy as np
 import os
 
-# Fonction de log avec encodage UTF-8 pour gérer les caractères spéciaux
-def log(message):
-    with open("log.txt", "a", encoding="utf-8") as f:
-        f.write(message + "\n")
+# Charger le modèle local MiDaS
+def load_midas_model():
+    model_path = "weights/dpt_large-midas-2f21e586.pt"
+    if not os.path.exists(model_path):
+        print(f"❌ Modèle introuvable : {model_path}")
+        sys.exit(1)
 
-# Vérification des arguments
-if len(sys.argv) != 3:
-    log("❌ Mauvais nombre d'arguments")
-    sys.exit(1)
-
-input_path = sys.argv[1]
-output_path = sys.argv[2]
-
-# Chargement du modèle MiDaS
-log("📦 Chargement du modèle MiDaS avec trust_repo=True...")
-try:
-    model = torch.hub.load("intel-isl/MiDaS", "DPT_Large", pretrained=True, trust_repo=True)
+    model = torch.hub.load(
+        'intel-isl/MiDaS',
+        'DPT_Large',
+        pretrained=False
+    )
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     model.eval()
-except Exception as e:
-    log(f"❌ Erreur lors du chargement du modèle MiDaS : {str(e)}")
-    sys.exit(1)
+    return model
 
-# Transformation des images
-transform = transforms.Compose([
-    transforms.Resize(384),  # Redimensionner pour DPT_Large
-    transforms.ToTensor(),
-])
+# Préparation de l'image
+def preprocess(image_path):
+    transform = torch.hub.load(
+        'intel-isl/MiDaS',
+        'transforms',
+        pretrained=False
+    ).dpt_transform
 
-try:
-    # Ouverture de l'image d'entrée
-    img = Image.open(input_path).convert("RGB")  # Convertir en RGB au cas où
+    img = Image.open(image_path).convert("RGB")
+    return transform(img).unsqueeze(0)
 
-    # Appliquer la transformation
-    img_input = transform(img).unsqueeze(0)
+# Main
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("❌ Usage : python depth.py <input_path> <output_path>")
+        sys.exit(1)
 
-    # Calcul de la carte de profondeur
-    with torch.no_grad():
-        depth_map = model(img_input)
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
 
-    # Sauvegarde en niveaux de gris
-    depth_map = depth_map.squeeze().cpu().numpy()
-    plt.imsave(output_path, depth_map, cmap='gray')
+    try:
+        model = load_midas_model()
+        input_batch = preprocess(input_path)
 
-    log(f"✅ Carte de profondeur générée avec succès : {output_path}")
+        with torch.no_grad():
+            prediction = model(input_batch)
+            depth_map = prediction.squeeze().cpu().numpy()
 
-except Exception as e:
-    log(f"❌ Erreur lors du traitement de l'image : {str(e)}")
-    sys.exit(1)
+        plt.imsave(output_path, depth_map, cmap='gray')
+        print("✅ Carte de profondeur enregistrée :", output_path)
+
+    except Exception as e:
+        print("❌ Erreur :", str(e))
+        sys.exit(1)

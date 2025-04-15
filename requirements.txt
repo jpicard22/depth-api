@@ -1,7 +1,6 @@
-flask
-opencv-python
 torch
+opencv-python-headless
 tqdm
-torchvision
-numpy
+requests
+Pillow
 transformers

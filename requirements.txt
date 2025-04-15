@@ -1,8 +1,6 @@
 torch
 torchvision
-opencv-python
-tqdm
-flask
-Pillow
 matplotlib
-gunicorn
+Pillow
+opencv-python
+numpy

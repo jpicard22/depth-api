@@ -9,7 +9,7 @@ import os
 
 # Charger le modèle local MiDaS
 def load_midas_model():
-    model_path = "weights/dpt_large-midas-2f21e586.pt"
+    model_path = "weights/dpt_beit_base_384.pt"
     if not os.path.exists(model_path):
         print(f"❌ Modèle introuvable : {model_path}")
         sys.exit(1)

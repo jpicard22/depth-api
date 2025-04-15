@@ -1,39 +1,47 @@
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, request, send_file
 import os
 import subprocess
+import uuid
 
 app = Flask(__name__)
-UPLOAD_FOLDER = "static/uploads"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-# Créer le dossier uploads s'il n'existe pas
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+UPLOAD_FOLDER = "uploads"
+PROCESSED_FOLDER = "processed"
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    uploaded_image = None
-    depth_image = None
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-    if request.method == "POST":
-        if "image" not in request.files:
-            return "Aucun fichier sélectionné", 400
-        
-        file = request.files["image"]
-        if file.filename == "":
-            return "Aucun fichier sélectionné", 400
+@app.route("/", methods=["POST"])
+def depth():
+    if 'image' not in request.files:
+        return "Aucune image envoyée", 400
 
-        file_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
-        file.save(file_path)
+    img_file = request.files['image']
+    img_id = str(uuid.uuid4())
+    input_path = os.path.join(UPLOAD_FOLDER, f"{img_id}.jpg")
+    output_path = os.path.join(PROCESSED_FOLDER, f"{img_id}_depth.png")
 
-        # Générer la carte de profondeur
-        depth_path = os.path.join(app.config["UPLOAD_FOLDER"], "depth_" + file.filename)
-        subprocess.run(["python", "depth.py", file_path, depth_path])
+    img_file.save(input_path)
 
-        uploaded_image = file.filename
-        depth_image = "depth_" + file.filename
+    try:
+        result = subprocess.run(
+            ['python', 'depth.py', input_path, output_path],
+            capture_output=True,
+            text=True
+        )
 
-    return render_template("index.html", uploaded_image=uploaded_image, depth_image=depth_image)
+         # LOG DU PROCESSUS
+        print("STDOUT:", result.stdout)
+        print("STDERR:", result.stderr)
+
+        if result.returncode != 0:
+            return f"Erreur lors du traitement : {result.stderr}", 500
+
+        return send_file(output_path, mimetype='image/png')
+
+    except Exception as e:
+        return f"Erreur serveur : {str(e)}", 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8080))  # 🚀 ici on récupère le port de Railway
+    app.run(host="0.0.0.0", port=port)

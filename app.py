@@ -5,7 +5,8 @@ import torch
 import cv2
 import numpy as np
 from PIL import Image
-from torchvision.transforms import Compose
+from torchvision import transforms
+from torch import nn
 
 app = Flask(__name__)
 
@@ -20,16 +21,21 @@ def download_model():
         urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
         print("✅ Modèle téléchargé avec succès.")
 
+# Charger le modèle directement depuis le fichier .pt
+def load_model():
+    # Charger le modèle
+    model = torch.load(MODEL_PATH)
+    model.eval()  # Mettre le modèle en mode évaluation
+    return model
+
 # Route principale pour générer la carte de profondeur
 @app.route('/', methods=['POST'])
 def depth_map():
     # Charger le modèle si ce n'est pas déjà fait
     if not hasattr(depth_map, "model"):
-        # Charger le modèle seulement quand une requête arrive
         download_model()
-        model_type = "dpt_beit_large_384"  # pour correspondre au fichier .pt
-        depth_map.model = torch.hub.load("intel-isl/MiDaS", model_type, model_path=MODEL_PATH, trust_repo=True)
-        depth_map.model.eval()
+        depth_map.model = load_model()
+
         # Transformation d'image adaptée au modèle
         midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
         depth_map.transform = midas_transforms.dpt_transform

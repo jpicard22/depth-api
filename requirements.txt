@@ -4,3 +4,4 @@ torch
 tqdm
 torchvision
 numpy
+transformers

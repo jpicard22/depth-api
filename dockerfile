@@ -17,6 +17,9 @@ WORKDIR /app
 # Copie les fichiers du projet dans l'image
 COPY . .
 
+RUN apt-get update && \
+    apt-get install -y libgl1-mesa-glx
+
 # Installe les dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 

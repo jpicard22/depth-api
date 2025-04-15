@@ -26,7 +26,6 @@ model_type = "DPT_BEiT_L_384"  # pour correspondre au fichier .pt
 model = torch.hub.load("intel-isl/MiDaS", model_type, model_path=MODEL_PATH, trust_repo=True)
 model.eval()
 
-
 # Transformation d'image adaptée au modèle
 midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
 transform = midas_transforms.dpt_transform

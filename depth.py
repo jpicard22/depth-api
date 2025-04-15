@@ -23,7 +23,6 @@ def load_midas_model():
     model.eval()
     return model
 
-
 # Préparation de l'image
 def preprocess(image_path):
     transform = torch.hub.load(

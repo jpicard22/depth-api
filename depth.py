@@ -1,60 +1,63 @@
-from flask import Flask, request, jsonify
-from depth import generate_depth_map  # Assurez-vous que c'est le bon nom de votre fonction
-import os
-import uuid
-import base64
-import logging
+import torch
+import cv2
+import numpy as np
+from PIL import Image
+import timm
 
-logging.basicConfig(level=logging.DEBUG) # Activer les logs de débogage
+def generate_depth_map(input_path, output_path):
+    """
+    Génère une carte de profondeur à partir d'une image en utilisant le modèle MiDaS.
 
-app = Flask(__name__)
-
-UPLOAD_FOLDER = "uploads"
-PROCESSED_FOLDER = "processed"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
-
-@app.route("/", methods=["POST"])
-def generate_depth():
-    logging.info("Requête POST reçue.")
-    if 'image' not in request.files:
-        logging.error("Aucune image fournie.")
-        return jsonify({"error": "No image provided"}), 400
-
-    file = request.files['image']
-    if file.filename == "":
-        logging.error("Nom de fichier vide.")
-        return jsonify({"error": "Empty filename"}), 400
-
-    filename = f"{uuid.uuid4().hex}.jpg"
-    input_path = os.path.join(UPLOAD_FOLDER, filename)
-    output_path = os.path.join(PROCESSED_FOLDER, f"{uuid.uuid4().hex}_depth.jpg")
-    logging.info(f"Sauvegarde de l'image vers : {input_path}")
+    Args:
+        input_path (str): Chemin vers l'image d'entrée.
+        output_path (str): Chemin où enregistrer la carte de profondeur.
+    """
     try:
-        file.save(input_path)
-        logging.info(f"Image sauvegardée avec succès.")
+        # Charger le modèle MiDaS
+        model_type = "MiDaS_small"
+        midas = torch.hub.load("intel-isl/MiDaS", model_type)
 
-        logging.info(f"Génération de la carte de profondeur vers : {output_path}")
-        generate_depth_map(input_path, output_path)
-        logging.info(f"Carte de profondeur générée avec succès.")
+        # Utiliser CUDA si disponible, sinon le CPU
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        midas.to(device)
+        midas.eval()
 
-        with open(output_path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-        logging.info("Image de profondeur encodée en base64.")
+        # Charger le transformateur correspondant au modèle
+        midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
+        transform = midas_transforms.small_transform if model_type == "MiDaS_small" else midas_transforms.dpt_transform
 
-        os.remove(input_path)
-        os.remove(output_path)
-        logging.info("Fichiers temporaires supprimés.")
+        # Charger et prétraiter l'image
+        img = cv2.imread(input_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        return jsonify({"processed_image": encoded_string}), 200
+        input_batch = transform(img).to(device)
+
+        with torch.no_grad():
+            prediction = midas(input_batch)
+
+            prediction = torch.nn.functional.interpolate(
+                prediction.unsqueeze(1),
+                size=img.shape[:2],
+                mode="bicubic",
+                align_corners=False,
+            ).squeeze()
+
+        depth_map = prediction.cpu().numpy()
+        output_depth = cv2.normalize(depth_map, None, 255,0, cv2.NORM_MINMAX, cv2.CV_8U)
+        output_depth_color = cv2.applyColorMap(output_depth, cv2.COLORMAP_INFERNO)
+        cv2.imwrite(output_path, output_depth_color)
 
     except Exception as e:
-        logging.error(f"Erreur lors du traitement : {e}")
-        if os.path.exists(input_path):
-            os.remove(input_path)
-        if os.path.exists(output_path):
-            os.remove(output_path)
-        return jsonify({"error": str(e)}), 500
+        print(f"Erreur lors de la génération de la carte de profondeur : {e}")
+        raise
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+if __name__ == '__main__':
+    # Exemple d'utilisation (pour test local)
+    # Créez un dossier 'uploads' et placez une image nommée 'test.jpg' dedans
+    input_image_path = 'uploads/test.jpg'
+    output_depth_path = 'processed/test_depth.png'
+    try:
+        generate_depth_map(input_image_path, output_depth_path)
+        print(f"Carte de profondeur générée et enregistrée à : {output_depth_path}")
+    except Exception as e:
+        print(f"Erreur : {e}")

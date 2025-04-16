@@ -1,9 +1,15 @@
+from flask import Flask, request, jsonify
 import os
 import base64
-from flask import Flask, request, jsonify
-from depth import generate_depth_map
+import uuid
+from depth import generate_depth_map  # Importez la fonction depuis depth.py
 
 app = Flask(__name__)
+
+UPLOAD_FOLDER = "uploads"
+PROCESSED_FOLDER = "processed"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 @app.route('/', methods=['GET'])
 def index():
@@ -21,25 +27,30 @@ def generate():
         return jsonify({'error': 'No image uploaded'}), 400
 
     file = request.files['image']
-    input_path = 'input.jpg'
-    output_path = 'output.png'
+    if file.filename == "":
+        return jsonify({'error': 'Empty filename'}), 400
+
+    image_name = f"{uuid.uuid4().hex}.{file.filename.rsplit('.', 1)[-1].lower()}"
+    input_path = os.path.join(UPLOAD_FOLDER, image_name)
+    output_name = f"{uuid.uuid4().hex}_depth.png"  # Force la sortie en PNG pour la base64
+    output_path = os.path.join(PROCESSED_FOLDER, output_name)
 
     try:
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        os.makedirs(PROCESSED_FOLDER, exist_ok=True)
         file.save(input_path)
+
         generate_depth_map(input_path, output_path)
 
-        # Lire l'image de profondeur et l'encoder en base64
         with open(output_path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
 
-        # Supprimer les fichiers temporaires
         os.remove(input_path)
         os.remove(output_path)
 
         return jsonify({'processed_image': encoded_string}), 200
 
     except Exception as e:
-        # Supprimer les fichiers en cas d'erreur
         if os.path.exists(input_path):
             os.remove(input_path)
         if os.path.exists(output_path):

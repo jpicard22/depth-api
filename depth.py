@@ -10,25 +10,28 @@ logging.basicConfig(level=logging.INFO)
 
 def generate_depth_map(input_path, output_path):
     try:
-        # Définir le chemin vers le fichier de poids dans le dossier 'weights' à la racine
         model_path = 'weights/midas_v21_small_256.pt'
 
-        # Vérifier si le fichier de poids existe
         if not os.path.exists(model_path):
-            logging.error(f"Fichier de poids du modèle non trouvé à : {model_path}")
+            logging.error(f"Fichier de poids non trouvé à : {model_path}")
             raise FileNotFoundError(f"Fichier de poids du modèle non trouvé à : {model_path}")
         else:
             logging.info(f"Chargement du modèle depuis le fichier local : {model_path}")
 
-        # Charger le modèle directement depuis le fichier de poids
-        midas = torch.hub.load("intel-isl/MiDaS", "MiDaS_small", trust_repo=True, pretrained=False)
+        # Obtenir le répertoire du cache de torch hub
+        hub_dir = torch.hub.get_dir()
+        midas_repo_name = 'intel-isl_MiDaS_master'
+        midas_local_repo = os.path.join(hub_dir, midas_repo_name)
+
+        # Charger le modèle en spécifiant le chemin local et pretrained=False
+        midas = torch.hub.load(midas_local_repo, 'MiDaS_small', source='local', pretrained=False, trust_repo=True)
         midas.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         midas.to(device)
         midas.eval()
 
         # Charger le transformateur
-        midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
+        midas_transforms = torch.hub.load('intel-isl/MiDaS', 'transforms', trust_repo=True)
         transform = midas_transforms.small_transform
 
         # Charger et prétraiter l'image
@@ -37,7 +40,6 @@ def generate_depth_map(input_path, output_path):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         original_height, original_width = img.shape[:2]
 
-        # Redimensionner l'image si elle est trop grande (facultatif, mais recommandé)
         max_size = 512
         if max(original_height, original_width) > max_size:
             if original_height > original_width:
@@ -45,7 +47,7 @@ def generate_depth_map(input_path, output_path):
                 new_width = int(original_width * (new_height / original_height))
             else:
                 new_width = max_size
-                new_height = int(original_height * (new_width / new_width)) # Correction ici
+                new_height = int(original_height * (new_width / new_width))
             img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
             logging.info(f"Image redimensionnée de ({original_width}, {original_height}) à ({new_width}, {new_height})")
 
@@ -74,7 +76,6 @@ def generate_depth_map(input_path, output_path):
         raise
 
 if __name__ == '__main__':
-    # Exemple d'utilisation (pour test local)
     input_image_path = 'uploads/test.jpg'
     output_depth_path = 'processed/test_depth.png'
     try:

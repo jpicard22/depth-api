@@ -5,15 +5,10 @@ from PIL import Image
 import timm
 import logging
 import os
-import sys
+from midas.model_loader import load_model
+from midas.transforms import MiDaS_small_transform
 
 logging.basicConfig(level=logging.INFO)
-
-# Ajouter le chemin du dépôt MiDaS cloné au sys.path
-sys.path.append(os.path.join(os.getcwd(), 'midas_repo'))
-
-from midas.model_loader import load_model
-from midas.transforms import MiDaS_small_transform  # Ou DPTTransform si vous utilisiez un autre modèle
 
 def generate_depth_map(input_path, output_path):
     try:
@@ -25,7 +20,6 @@ def generate_depth_map(input_path, output_path):
         else:
             logging.info(f"Chargement des poids depuis le fichier local : {model_path}")
 
-        # Charger le modèle directement depuis le code local
         model_type = "MiDaS_small"
         midas = load_model(model_type, pretrained=False)
         midas.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
@@ -34,8 +28,7 @@ def generate_depth_map(input_path, output_path):
         midas.eval()
         logging.info(f"Modèle {model_type} chargé depuis le code local.")
 
-        # Charger le transformateur correspondant
-        transform = MiDaS_small_transform(model_type) # Ou DPTTransform()
+        transform = MiDaS_small_transform(model_type)
         logging.info("Transformateur MiDaS chargé.")
 
         # Charger et prétraiter l'image

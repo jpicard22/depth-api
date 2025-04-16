@@ -14,8 +14,13 @@ def generate_depth_map(input_path, output_path):
     """
     try:
         # Charger le modèle MiDaS
-        model_type = "DPT_Large"
-        midas = torch.hub.load("intel-isl/MiDaS", model_type)
+        model_type = "MiDaS_small"
+        # model_type = "DPT_Large"
+        # model_type = "DPT_Hybrid"
+
+        # midas = torch.hub.load("intel-isl/MiDaS", model_type)
+        midas = torch.hub.load("intel-isl/MiDaS", model_type, trust_repo=True)
+        # midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
 
         # Utiliser CUDA si disponible, sinon le CPU
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -23,8 +28,8 @@ def generate_depth_map(input_path, output_path):
         midas.eval()
 
         # Charger le transformateur correspondant au modèle
-        midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
-        transform = midas_transforms.small_transform if model_type == "DPT_Large" else midas_transforms.dpt_transform
+        midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
+        transform = midas_transforms.small_transform if model_type == "MiDaS_small" else midas_transforms.dpt_transform
 
         # Charger et prétraiter l'image
         img = cv2.imread(input_path)

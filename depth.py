@@ -5,9 +5,6 @@ import logging
 import sys
 import os
 
-# Ajouter le dossier du repo MiDaS au path
-midas_path = os.path.join(os.path.dirname(__file__), 'midas')
-sys.path.append(midas_path)
 
 from midas.midas_net import MidasNet_small
 from midas.transforms import Resize, NormalizeImage, PrepareForNet

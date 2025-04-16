@@ -23,8 +23,14 @@ def generate_depth_map(input_path, output_path):
         midas_repo_name = 'intel-isl_MiDaS_master'
         midas_local_repo = os.path.join(hub_dir, midas_repo_name)
 
-        # Charger le modèle en spécifiant le chemin local et pretrained=False
-        midas = torch.hub.load(midas_local_repo, 'MiDaS_small', source='local', pretrained=False, trust_repo=True)
+        # Charger le modèle en forçant le téléchargement du dépôt (si absent)
+        try:
+            midas = torch.hub.load('intel-isl/MiDaS', 'MiDaS_small', pretrained=False, trust_repo=True)
+        except Exception as e:
+            logging.error(f"Erreur lors du chargement initial du dépôt MiDaS : {e}")
+            raise
+
+        # Charger les poids locaux
         midas.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         midas.to(device)

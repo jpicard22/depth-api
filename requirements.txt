@@ -1,5 +1,5 @@
-setuptools --upgrade
-pip --upgrade
+setuptools>=58.0.0 --upgrade
+pip>=21.0.0 --upgrade
 flask
 torch
 torchvision

@@ -5,7 +5,7 @@ import logging
 import sys
 import os
 
-# Ajouter le dossier parent de 'midas' (MiDaS) au path pour que 'midas' soit trouvé comme un package
+# Ajouter le chemin vers le dossier 'MiDaS' au path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'MiDaS')))
 
 from midas.midas_net import MidasNet_small
@@ -32,7 +32,7 @@ def generate_depth_map(input_path, output_path):
         model.to(device)
         model.eval()
 
-        transform = Compose([  
+        transform = Compose([
             Resize(256, 256, resize_target=None, keep_aspect_ratio=True,
                    ensure_multiple_of=32, resize_method="upper_bound",
                    image_interpolation_method=cv2.INTER_CUBIC),

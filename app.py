@@ -23,8 +23,8 @@ def download_model():
 
 # Charger le modèle directement depuis le fichier .pt
 def load_model():
-    # Charger le modèle
-    model = torch.load(MODEL_PATH)
+    # Charger le modèle avec l'argument weights_only=False
+    model = torch.load(MODEL_PATH, weights_only=False)
     model.eval()  # Mettre le modèle en mode évaluation
     return model
 

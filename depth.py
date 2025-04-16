@@ -1,49 +1,45 @@
 import torch
+import urllib.request
 import cv2
 import os
-import urllib.request
-from torchvision.transforms import Compose
-from PIL import Image
 import numpy as np
+from torchvision.transforms import Compose
+from midas.midas_net import MidasNet
+from midas.transforms import Resize, NormalizeImage, PrepareForNet
 
-# 🔧 Chemins
-MODEL_PATH = "weights/dpt_beit_large_384.pt"
-MODEL_URL = "https://drive.google.com/uc?export=download&id=1UjDhAMJc0La1I_n7Kn_KRc8Y3hbRt4jn"
-INPUT_PATH = "public/uploads/input.jpg"
-OUTPUT_PATH = "public/processed/depth.png"
+def generate_depth_map(input_path, output_path):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 📥 Téléchargement du modèle si absent
-def download_model():
-    if not os.path.exists(MODEL_PATH):
-        print("📦 Téléchargement du modèle depuis Google Drive...")
-        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
-        print("✅ Modèle téléchargé.")
+    # Télécharger le modèle s’il n’est pas déjà là
+    model_type = "DPT_Large"  # ou "DPT_Hybrid" selon préférences
+    model = torch.hub.load("intel-isl/MiDaS", model_type)
+    model.eval()
+    model.to(device)
 
-download_model()
+    midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
+    transform = midas_transforms.dpt_transform if model_type.startswith("DPT") else midas_transforms.small_transform
 
-# 🔍 Charger modèle MiDaS avec modèle local
-model_type = "DPT_BEiT_L_384"
-model = torch.hub.load("intel-isl/MiDaS", model_type, model_path=MODEL_PATH, trust_repo=True)
-model.eval()
+    # Lire l’image
+    img = cv2.imread(input_path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    input_tensor = transform(img).to(device)
 
-# 🔧 Chargement des transforms MiDaS
-midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
-transform = midas_transforms.dpt_transform
+    with torch.no_grad():
+        prediction = model(input_tensor)
+        prediction = torch.nn.functional.interpolate(
+            prediction.unsqueeze(1),
+            size=img.shape[:2],
+            mode="bicubic",
+            align_corners=False,
+        ).squeeze()
 
-# 📸 Lecture de l'image
-img = Image.open(INPUT_PATH).convert("RGB")
-input_tensor = transform(img).unsqueeze(0)
+    depth_map = prediction.cpu().numpy()
 
-# 🔍 Prédiction de la profondeur
-with torch.no_grad():
-    prediction = model(input_tensor)
-    depth = prediction.squeeze().cpu().numpy()
+    # Normalisation pour affichage
+    depth_min = depth_map.min()
+    depth_max = depth_map.max()
+    depth_vis = 255 * (depth_map - depth_min) / (depth_max - depth_min)
+    depth_vis = depth_vis.astype("uint8")
 
-# 🎨 Normalisation
-depth = (depth - depth.min()) / (depth.max() - depth.min())
-depth_img = (depth * 255).astype(np.uint8)
-
-# 💾 Sauvegarde de l’image
-cv2.imwrite(OUTPUT_PATH, depth_img)
-print("✅ Carte de profondeur générée :", OUTPUT_PATH)
+    # Sauvegarder l’image de profondeur
+    cv2.imwrite(output_path, depth_vis)

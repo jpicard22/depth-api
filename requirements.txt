@@ -1,6 +1,6 @@
+flask
 torch
 torchvision
 timm
-opencv-python-headless
-Pillow
-flask
+opencv-python
+numpy

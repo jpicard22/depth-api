@@ -1,33 +1,18 @@
-"""MidashNet: Network for monocular depth estimation trained by mixing several datasets.
-This file contains code that is adapted from
-https://github.com/thomasjpfan/pytorch_refinenet/blob/master/pytorch_refinenet/refinenet/refinenet_4cascade.py
-"""
+# midas/midas_net.py
+
 import torch
 import torch.nn as nn
-
 from .base_model import BaseModel
 from .blocks import FeatureFusionBlock, Interpolate, _make_encoder
 
+class MidasNet_small(BaseModel):
+    """ Network for monocular depth estimation with a smaller architecture."""
 
-class MidasNet(BaseModel):
-    """Network for monocular depth estimation.
-    """
-
-    def __init__(self, path=None, features=256, non_negative=True):
-        """Init.
-
-        Args:
-            path (str, optional): Path to saved model. Defaults to None.
-            features (int, optional): Number of features. Defaults to 256.
-            backbone (str, optional): Backbone network for encoder. Defaults to resnet50
-        """
-        print("Loading weights: ", path)
-
-        super(MidasNet, self).__init__()
+    def __init__(self, path=None, features=64, backbone="efficientnet_lite3", non_negative=True, blocks=None):
+        super(MidasNet_small, self).__init__()
 
         use_pretrained = False if path is None else True
-
-        self.pretrained, self.scratch = _make_encoder(backbone="resnext101_wsl", features=features, use_pretrained=use_pretrained)
+        self.pretrained, self.scratch = _make_encoder(backbone=backbone, features=features, use_pretrained=use_pretrained)
 
         self.scratch.refinenet4 = FeatureFusionBlock(features)
         self.scratch.refinenet3 = FeatureFusionBlock(features)
@@ -47,15 +32,6 @@ class MidasNet(BaseModel):
             self.load(path)
 
     def forward(self, x):
-        """Forward pass.
-
-        Args:
-            x (tensor): input data (image)
-
-        Returns:
-            tensor: depth
-        """
-
         layer_1 = self.pretrained.layer1(x)
         layer_2 = self.pretrained.layer2(layer_1)
         layer_3 = self.pretrained.layer3(layer_2)
@@ -72,5 +48,4 @@ class MidasNet(BaseModel):
         path_1 = self.scratch.refinenet1(path_2, layer_1_rn)
 
         out = self.scratch.output_conv(path_1)
-
         return torch.squeeze(out, dim=1)

@@ -1,17 +1,17 @@
 import torch
 import cv2
 import numpy as np
+from PIL import Image
+import timm
 import logging
 import os
-from midas.model_loader import load_model
 
 logging.basicConfig(level=logging.INFO)
 
 def generate_depth_map(input_path, output_path):
     try:
-        # Définir le chemin vers le fichier de poids dans le dossier 'weights'
+        # Définir le chemin vers le fichier de poids dans le dossier 'weights' à la racine
         model_path = 'weights/midas_v21_small_256.pt'
-        model_type = 'midas_v21_small_256'
 
         # Vérifier si le fichier de poids existe
         if not os.path.exists(model_path):
@@ -20,51 +20,65 @@ def generate_depth_map(input_path, output_path):
         else:
             logging.info(f"Chargement du modèle depuis le fichier local : {model_path}")
 
-        # Sélection du device
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        # Charger le modèle depuis midas/model_loader.py
-        midas = load_model(model_type, device, model_path)
+        # Charger le modèle directement depuis le fichier de poids
+        midas = torch.hub.load("intel-isl/MiDaS", "MiDaS_small", trust_repo=True, pretrained=False)
+        midas.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        midas.to(device)
         midas.eval()
 
-        # Charger les transforms
-        from midas.transforms import small_transform
-        transform = small_transform
+        # Charger le transformateur
+        midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
+        transform = midas_transforms.small_transform
 
         # Charger et prétraiter l'image
         img = cv2.imread(input_path)
+        logging.info(f"Image chargée depuis : {input_path}, shape: {img.shape}")
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         original_height, original_width = img.shape[:2]
 
-        input_tensor = transform({"image": img})["image"].to(device).unsqueeze(0)
+        # Redimensionner l'image si elle est trop grande (facultatif, mais recommandé)
+        max_size = 512
+        if max(original_height, original_width) > max_size:
+            if original_height > original_width:
+                new_height = max_size
+                new_width = int(original_width * (new_height / original_height))
+            else:
+                new_width = max_size
+                new_height = int(original_height * (new_width / new_width)) # Correction ici
+            img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
+            logging.info(f"Image redimensionnée de ({original_width}, {original_height}) à ({new_width}, {new_height})")
 
-        # Prédiction
+        input_batch = transform(img).to(device)
+        logging.info("Image transformée et déplacée vers le dispositif.")
+
         with torch.no_grad():
-            prediction = midas(input_tensor)
-
+            prediction = midas(input_batch)
+            logging.info("Prédiction MiDaS effectuée.")
             prediction = torch.nn.functional.interpolate(
                 prediction.unsqueeze(1),
                 size=(original_height, original_width),
                 mode="bicubic",
                 align_corners=False,
             ).squeeze()
+            logging.info("Carte de profondeur redimensionnée à la taille originale.")
 
-        # Normalisation et sauvegarde
         depth_map = prediction.cpu().numpy()
         output_depth = cv2.normalize(depth_map, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
         output_depth_color = cv2.applyColorMap(output_depth, cv2.COLORMAP_INFERNO)
         cv2.imwrite(output_path, output_depth_color)
-        logging.info(f"Carte de profondeur générée et enregistrée à : {output_path}")
+        logging.info(f"Carte de profondeur enregistrée à : {output_path}")
 
     except Exception as e:
         logging.error(f"Erreur lors du traitement : {e}")
         raise
 
 if __name__ == '__main__':
+    # Exemple d'utilisation (pour test local)
     input_image_path = 'uploads/test.jpg'
     output_depth_path = 'processed/test_depth.png'
     try:
         generate_depth_map(input_image_path, output_depth_path)
-        print(f"Carte de profondeur générée à : {output_depth_path}")
+        print(f"Carte de profondeur générée et enregistrée à : {output_depth_path}")
     except Exception as e:
         print(f"Erreur : {e}")

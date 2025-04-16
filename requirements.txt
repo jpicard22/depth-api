@@ -2,5 +2,5 @@ flask
 torch
 torchvision
 timm
-opencv-python
+opencv-python-headless
 numpy

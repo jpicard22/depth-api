@@ -8,4 +8,4 @@ gunicorn
 matplotlib
 tqdm
 Pillow
--e ./midas_repo
+./midas_repo

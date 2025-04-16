@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import timm
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 
@@ -17,9 +18,20 @@ def generate_depth_map(input_path, output_path):
         output_path (str): Chemin où enregistrer la carte de profondeur.
     """
     try:
-        # Charger le modèle MiDaS
         model_type = "MiDaS_small"
-        midas = torch.hub.load("intel-isl/MiDaS", model_type, trust_repo=True)
+        repo = "intel-isl/MiDaS"
+        model_name = "midas_v21_small_256.pt"
+        cached_file = os.path.join(torch.hub.get_dir(), f"{repo.replace('/', '_')}_{model_name}")
+
+        logging.info(f"Chemin du fichier de poids mis en cache : {cached_file}")
+
+        if not os.path.exists(cached_file):
+            logging.info(f"Téléchargement des poids du modèle {model_name} depuis {repo}")
+            midas = torch.hub.load(repo, model_type, trust_repo=True)
+        else:
+            logging.info(f"Utilisation du fichier de poids mis en cache : {cached_file}")
+            midas = torch.hub.load(repo, model_type, trust_repo=True, pretrained=False)
+            midas.load_state_dict(torch.load(cached_file))
 
         # Utiliser CUDA si disponible, sinon le CPU
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")

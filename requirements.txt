@@ -1,4 +1,4 @@
-torch>=2.0
+torch
 torchvision
 timm
 opencv-python-headless

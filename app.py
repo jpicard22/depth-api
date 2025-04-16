@@ -3,32 +3,32 @@ import torch
 import cv2
 import numpy as np
 from PIL import Image
-from flask import Flask, request, jsonify, send_file
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize
+from flask import Flask, request, send_file
+from torchvision.transforms import Compose
 
 app = Flask(__name__)
 
-# Charger le modèle
+# Chargement du modèle MiDaS
 def load_model():
     model_type = "DPT_BEiT_L_384"
-    midas = torch.hub.load("intel-isl/MiDaS", model_type)
-    midas.eval()
+    model = torch.hub.load("intel-isl/MiDaS", model_type)
+    model.eval()
     transform = torch.hub.load("intel-isl/MiDaS", "transforms").dpt_transform
-    return midas, transform
+    return model, transform
 
 midas, transform = load_model()
 
 @app.route("/", methods=["POST"])
 def predict():
     if "image" not in request.files:
-        return jsonify({"error": "Aucune image fournie"}), 400
+        return {"error": "Aucune image fournie"}, 400
 
     file = request.files["image"]
     img = Image.open(file.stream).convert("RGB")
-    img_input = transform(img).unsqueeze(0)
+    input_tensor = transform(img).unsqueeze(0)
 
     with torch.no_grad():
-        prediction = midas(img_input)
+        prediction = midas(input_tensor)
         prediction = torch.nn.functional.interpolate(
             prediction.unsqueeze(1),
             size=img.size[::-1],
@@ -47,4 +47,5 @@ def predict():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    print(f"✅ Démarrage de l'API Flask sur le port {port}")
+    app.run(host="0.0.0.0", port=port, debug=True)

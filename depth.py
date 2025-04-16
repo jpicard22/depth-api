@@ -5,6 +5,8 @@ import logging
 import sys
 import os
 
+# Ajouter le dossier parent au path pour que 'midas' soit trouvé comme un package de niveau supérieur
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 
 from midas.midas_net import MidasNet_small
 from midas.transforms import Resize, NormalizeImage, PrepareForNet

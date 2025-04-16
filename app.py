@@ -8,8 +8,7 @@ from torchvision.transforms import Compose
 app = Flask(__name__)
 
 # Charger directement le modèle supporté par torch.hub
-model_type = "DPT_Large"  # ce modèle est dispo via torch.hub
-model = torch.hub.load("intel-isl/MiDaS", model_type)
+model = torch.hub.load("intel-isl/MiDaS", "DPT_Large")
 model.eval()
 
 # Récupérer les bonnes transformations

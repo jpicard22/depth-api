@@ -1,45 +1,50 @@
-from flask import Flask, request, send_file, jsonify
-from PIL import Image
+import os
 import torch
-import numpy as np
-import io
 import cv2
+import numpy as np
+from PIL import Image
+from flask import Flask, request, jsonify, send_file
+from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 
 app = Flask(__name__)
 
-# 🔥 Chargement du modèle MiDaS depuis torch.hub (pas besoin de fichier .pt local)
-model_type = "DPT_Large"  # ce modèle fonctionne bien avec 'transforms.dpt_transform'
-model = torch.hub.load("intel-isl/MiDaS", model_type)
-model.eval()
+# Charger le modèle
+def load_model():
+    model_type = "DPT_BEiT_L_384"
+    midas = torch.hub.load("intel-isl/MiDaS", model_type)
+    midas.eval()
+    transform = torch.hub.load("intel-isl/MiDaS", "transforms").dpt_transform
+    return midas, transform
 
-# 🎯 Transformations d’image
-midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
-transform = midas_transforms.dpt_transform
+midas, transform = load_model()
 
-@app.route('/', methods=['POST'])
-def depth_map():
-    if 'image' not in request.files:
-        return jsonify({"error": "Aucune image reçue"}), 400
+@app.route("/", methods=["POST"])
+def predict():
+    if "image" not in request.files:
+        return jsonify({"error": "Aucune image fournie"}), 400
 
-    img_file = request.files['image']
-    image = Image.open(img_file).convert("RGB")
-    input_tensor = transform(image).unsqueeze(0)
+    file = request.files["image"]
+    img = Image.open(file.stream).convert("RGB")
+    img_input = transform(img).unsqueeze(0)
 
     with torch.no_grad():
-        prediction = model(input_tensor)
-        depth = prediction.squeeze().cpu().numpy()
+        prediction = midas(img_input)
+        prediction = torch.nn.functional.interpolate(
+            prediction.unsqueeze(1),
+            size=img.size[::-1],
+            mode="bicubic",
+            align_corners=False
+        ).squeeze()
 
-    # 🧠 Normalisation de la carte de profondeur
-    depth_min = depth.min()
-    depth_max = depth.max()
-    depth_normalized = (depth - depth_min) / (depth_max - depth_min)
-    depth_img = (depth_normalized * 255).astype(np.uint8)
+    output = prediction.cpu().numpy()
+    output = (output - output.min()) / (output.max() - output.min())
+    output = (output * 255).astype(np.uint8)
 
-    # 💾 Conversion en PNG
-    _, buffer = cv2.imencode(".png", depth_img)
-    img_bytes = io.BytesIO(buffer.tobytes())
+    output_path = "/tmp/depth.png"
+    cv2.imwrite(output_path, output)
 
-    return send_file(img_bytes, mimetype='image/png')
+    return send_file(output_path, mimetype="image/png")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)

@@ -1,5 +1,6 @@
-flask
-torch
+torch>=2.0
 torchvision
-Pillow
+timm
 opencv-python-headless
+Pillow
+flask

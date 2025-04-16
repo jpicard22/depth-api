@@ -4,31 +4,21 @@ import numpy as np
 from PIL import Image
 import timm
 import logging
-import os
-from midas.model_loader import load_model
-from midas.transforms import MiDaS_small_transform
 
 logging.basicConfig(level=logging.INFO)
 
 def generate_depth_map(input_path, output_path):
     try:
-        model_path = 'weights/midas_v21_small_256.pt'
-
-        if not os.path.exists(model_path):
-            logging.error(f"Fichier de poids non trouvé à : {model_path}")
-            raise FileNotFoundError(f"Fichier de poids du modèle non trouvé à : {model_path}")
-        else:
-            logging.info(f"Chargement des poids depuis le fichier local : {model_path}")
-
+        # Charger le modèle MiDaS avec les poids pré-entraînés
         model_type = "MiDaS_small"
-        midas = load_model(model_type, pretrained=False)
-        midas.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+        midas = torch.hub.load("intel-isl/MiDaS", model_type, trust_repo=True)
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         midas.to(device)
         midas.eval()
-        logging.info(f"Modèle {model_type} chargé depuis le code local.")
+        logging.info("Modèle MiDaS chargé.")
 
-        transform = MiDaS_small_transform(model_type)
+        midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
+        transform = midas_transforms.small_transform
         logging.info("Transformateur MiDaS chargé.")
 
         # Charger et prétraiter l'image

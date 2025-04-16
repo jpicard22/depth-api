@@ -1,43 +1,60 @@
-import torch
-import cv2
-import numpy as np
-from PIL import Image
-from torchvision.transforms import Compose
+from flask import Flask, request, jsonify
+from depth import generate_depth_map  # Assurez-vous que c'est le bon nom de votre fonction
+import os
+import uuid
+import base64
+import logging
 
-# Chargement du modèle MiDaS au démarrage
-midas = torch.hub.load("intel-isl/MiDaS", "DPT_Large", trust_repo=True)
-midas.eval()
+logging.basicConfig(level=logging.DEBUG) # Activer les logs de débogage
 
-# Chargement des transformations nécessaires pour MiDaS
-midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
-transform = midas_transforms.dpt_transform
+app = Flask(__name__)
 
-def generate_depth_map(image_path, output_path):
-    """
-    Fonction pour générer une carte de profondeur à partir d'une image
-    """
-    # Lecture de l'image avec OpenCV
-    image = cv2.imread(image_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Conversion du BGR au RGB
+UPLOAD_FOLDER = "uploads"
+PROCESSED_FOLDER = "processed"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-    # Transformation de l'image pour le modèle MiDaS
-    input_image = Image.fromarray(image)
-    input_tensor = transform(input_image).unsqueeze(0)  # Ajouter une dimension batch
+@app.route("/", methods=["POST"])
+def generate_depth():
+    logging.info("Requête POST reçue.")
+    if 'image' not in request.files:
+        logging.error("Aucune image fournie.")
+        return jsonify({"error": "No image provided"}), 400
 
-    # Exécution du modèle MiDaS pour générer la carte de profondeur
-    with torch.no_grad():
-        prediction = midas(input_tensor)  # Prédiction de la carte de profondeur
-        prediction = torch.nn.functional.interpolate(
-            prediction.unsqueeze(1),  # Ajouter une dimension de canal
-            size=input_image.size[::-1],  # Taille de l'image d'origine (hauteur, largeur)
-            mode="bicubic",
-            align_corners=False,
-        ).squeeze()  # Suppression de la dimension inutile
+    file = request.files['image']
+    if file.filename == "":
+        logging.error("Nom de fichier vide.")
+        return jsonify({"error": "Empty filename"}), 400
 
-    # Normalisation des résultats
-    output = prediction.cpu().numpy()  # Conversion vers numpy
-    normalized = cv2.normalize(output, None, 0, 255, cv2.NORM_MINMAX)  # Normalisation des valeurs
-    depth_map = np.uint8(normalized)  # Conversion en format uint8 pour l'image
+    filename = f"{uuid.uuid4().hex}.jpg"
+    input_path = os.path.join(UPLOAD_FOLDER, filename)
+    output_path = os.path.join(PROCESSED_FOLDER, f"{uuid.uuid4().hex}_depth.jpg")
+    logging.info(f"Sauvegarde de l'image vers : {input_path}")
+    try:
+        file.save(input_path)
+        logging.info(f"Image sauvegardée avec succès.")
 
-    # Sauvegarde de la carte de profondeur
-    cv2.imwrite(output_path, depth_map)
+        logging.info(f"Génération de la carte de profondeur vers : {output_path}")
+        generate_depth_map(input_path, output_path)
+        logging.info(f"Carte de profondeur générée avec succès.")
+
+        with open(output_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        logging.info("Image de profondeur encodée en base64.")
+
+        os.remove(input_path)
+        os.remove(output_path)
+        logging.info("Fichiers temporaires supprimés.")
+
+        return jsonify({"processed_image": encoded_string}), 200
+
+    except Exception as e:
+        logging.error(f"Erreur lors du traitement : {e}")
+        if os.path.exists(input_path):
+            os.remove(input_path)
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)

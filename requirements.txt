@@ -4,3 +4,4 @@ torchvision
 timm
 opencv-python-headless
 numpy
+gunicorn

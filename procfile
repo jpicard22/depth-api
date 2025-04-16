@@ -1,1 +1,1 @@
-web: PYTHONPATH=$PYTHONPATH:./midas_repo python app.py
+web: python app.py

@@ -1,3 +1,5 @@
+setuptools --upgrade
+pip --upgrade
 flask
 torch
 torchvision
@@ -8,4 +10,4 @@ gunicorn
 matplotlib
 tqdm
 Pillow
-./midas_repo
+-e ./midas_repo

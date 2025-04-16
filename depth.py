@@ -14,7 +14,7 @@ def generate_depth_map(input_path, output_path):
     """
     try:
         # Charger le modèle MiDaS
-        model_type = "MiDaS_small"
+        model_type = "DPT_Hybrid"
         midas = torch.hub.load("intel-isl/MiDaS", model_type)
 
         # Utiliser CUDA si disponible, sinon le CPU

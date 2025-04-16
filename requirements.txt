@@ -1,10 +1,5 @@
-torch
-opencv-python-headless
-tqdm
-requests
-Pillow
-transformers
 flask
+torch
 torchvision
-numpy
-timm
+Pillow
+opencv-python-headless

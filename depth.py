@@ -1,10 +1,7 @@
 import torch
-import sys
-from torchvision import transforms
 import cv2
 import numpy as np
 from PIL import Image
-import matplotlib.pyplot as plt
 import timm
 
 def generate_depth_map(input_path, output_path):
@@ -15,58 +12,40 @@ def generate_depth_map(input_path, output_path):
         input_path (str): Chemin vers l'image d'entrée.
         output_path (str): Chemin où enregistrer la carte de profondeur.
     """
-
-    input_path = sys.argv[1]
-    output_path = sys.argv[2]
-
     try:
         # Charger le modèle MiDaS
-        model_type = "DPT_Hybrid"
+        model_type = "MiDaS_small"
         midas = torch.hub.load("intel-isl/MiDaS", model_type)
 
         # Utiliser CUDA si disponible, sinon le CPU
-        # device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-        # midas.to(device)
-        # midas.eval()
-        device =  torch.hub.load("intel-isl/MiDaS", "DPT_Hybrid", pretrained=True)
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         midas.to(device)
         midas.eval()
 
         # Charger le transformateur correspondant au modèle
         midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
-        # transform = midas_transforms.small_transform if model_type == "DPT_Hybrid" else midas_transforms.dpt_transform
-        transform = transforms.Compose([
-        transforms.Resize(384),  # On redimensionne à 384 pour améliorer la qualité
-        transforms.ToTensor(),  # Convertir en tensor
-        ])
+        transform = midas_transforms.small_transform if model_type == "MiDaS_small" else midas_transforms.dpt_transform
 
         # Charger et prétraiter l'image
         img = cv2.imread(input_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        # input_batch = transform(img).to(device)
-        input_batch = transform(img).unsqueeze(0) 
-
-        # with torch.no_grad():
-        #     prediction = midas(input_batch)
-
-            # prediction = torch.nn.functional.interpolate(
-            #     prediction.unsqueeze(1),
-            #     size=img.shape[:2],
-            #     mode="bicubic",
-            #     align_corners=False,
-            # ).squeeze()
-
-        # depth_map = prediction.cpu().numpy()
-        # output_depth = cv2.normalize(depth_map, None, 255,0, cv2.NORM_MINMAX, cv2.CV_8U)
-        # output_depth_color = cv2.applyColorMap(output_depth, cv2.COLORMAP_INFERNO)
-        # cv2.imwrite(output_path, output_depth_color)
+        input_batch = transform(img).to(device)
 
         with torch.no_grad():
-            depth_map = midas(input_batch)
+            prediction = midas(input_batch)
 
-        depth_map = depth_map.squeeze().cpu().numpy()
-        plt.imsave(output_path, depth_map, cmap='gray')
+            prediction = torch.nn.functional.interpolate(
+                prediction.unsqueeze(1),
+                size=img.shape[:2],
+                mode="bicubic",
+                align_corners=False,
+            ).squeeze()
+
+        depth_map = prediction.cpu().numpy()
+        output_depth = cv2.normalize(depth_map, None, 255,0, cv2.NORM_MINMAX, cv2.CV_8U)
+        output_depth_color = cv2.applyColorMap(output_depth, cv2.COLORMAP_INFERNO)
+        cv2.imwrite(output_path, output_depth_color)
 
     except Exception as e:
         print(f"Erreur lors de la génération de la carte de profondeur : {e}")

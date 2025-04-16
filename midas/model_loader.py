@@ -6,8 +6,8 @@ def load_model(model_type: str, device: torch.device, model_path: str):
     if model_type == "midas_v21_small_256":
         # Charger ResNet50 localement
         resnet50 = models.resnet50(pretrained=False)  # Ne pas télécharger les poids par défaut
-        resnet50.load_state_dict(torch.load(model_path))  # Charger les poids depuis le fichier local
-        resnet50.to(device)
+        resnet50.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))  # Charger les poids sur le CPU
+        resnet50.to(device)  # Transférer le modèle sur le périphérique approprié
         
         # Maintenant, initialiser MidasNet_small avec ResNet50 comme backbone
         model = MidasNet_small(

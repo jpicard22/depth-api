@@ -9,36 +9,25 @@ import os
 logging.basicConfig(level=logging.INFO)
 
 def generate_depth_map(input_path, output_path):
-    """
-    Génère une carte de profondeur à partir d'une image en utilisant le modèle MiDaS,
-    avec un redimensionnement de l'image d'entrée pour optimiser les performances.
-
-    Args:
-        input_path (str): Chemin vers l'image d'entrée.
-        output_path (str): Chemin où enregistrer la carte de profondeur.
-    """
     try:
-        model_type = "MiDaS_small"
-        repo = "intel-isl/MiDaS"
-        model_name = "midas_v21_small_256.pt"
-        cached_file = os.path.join(torch.hub.get_dir(), f"{repo.replace('/', '_')}_{model_name}")
+        # Définir le chemin vers le fichier de poids dans le dossier 'weights'
+        model_path = 'weights/midas_v21_small_256.pt'
 
-        logging.info(f"Chemin du fichier de poids mis en cache : {cached_file}")
-
-        if not os.path.exists(cached_file):
-            logging.info(f"Téléchargement des poids du modèle {model_name} depuis {repo}")
-            midas = torch.hub.load(repo, model_type, trust_repo=True)
+        # Vérifier si le fichier de poids existe
+        if not os.path.exists(model_path):
+            logging.error(f"Fichier de poids du modèle non trouvé à : {model_path}")
+            raise FileNotFoundError(f"Fichier de poids du modèle non trouvé à : {model_path}")
         else:
-            logging.info(f"Utilisation du fichier de poids mis en cache : {cached_file}")
-            midas = torch.hub.load(repo, model_type, trust_repo=True, pretrained=False)
-            midas.load_state_dict(torch.load(cached_file))
+            logging.info(f"Chargement du modèle depuis le fichier local : {model_path}")
 
-        # Utiliser CUDA si disponible, sinon le CPU
+        # Charger le modèle directement depuis le fichier de poids
+        midas = torch.hub.load("intel-isl/MiDaS", "MiDaS_small", trust_repo=True, pretrained=False)
+        midas.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         midas.to(device)
         midas.eval()
 
-        # Charger le transformateur correspondant au modèle
+        # Charger le transformateur
         midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
         transform = midas_transforms.small_transform
 
@@ -47,7 +36,7 @@ def generate_depth_map(input_path, output_path):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         original_height, original_width = img.shape[:2]
 
-        # Redimensionner l'image si elle est trop grande
+        # Redimensionner l'image si elle est trop grande (facultatif, mais recommandé)
         max_size = 512
         if max(original_height, original_width) > max_size:
             if original_height > original_width:
@@ -66,7 +55,7 @@ def generate_depth_map(input_path, output_path):
 
             prediction = torch.nn.functional.interpolate(
                 prediction.unsqueeze(1),
-                size=(original_height, original_width),  # Redimensionner la profondeur à la taille originale
+                size=(original_height, original_width),
                 mode="bicubic",
                 align_corners=False,
             ).squeeze()
@@ -78,12 +67,11 @@ def generate_depth_map(input_path, output_path):
         logging.info(f"Carte de profondeur générée et enregistrée à : {output_path}")
 
     except Exception as e:
-        logging.error(f"Erreur lors de la génération de la carte de profondeur : {e}")
+        logging.error(f"Erreur lors du chargement du modèle ou de la génération de la carte de profondeur : {e}")
         raise
 
 if __name__ == '__main__':
     # Exemple d'utilisation (pour test local)
-    # Créez un dossier 'uploads' et placez une image nommée 'test.jpg' dedans
     input_image_path = 'uploads/test.jpg'
     output_depth_path = 'processed/test_depth.png'
     try:

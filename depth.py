@@ -1,3 +1,4 @@
+import importlib
 import torch
 import cv2
 import numpy as np
@@ -5,9 +6,15 @@ import logging
 import sys
 import os
 
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+midas_net_path = os.path.join(os.path.dirname(__file__), "MiDaS", "midas", "midas_net.py")
 
-from MiDaS.midas.midas_net import MidasNet_small
+# Charger le module dynamiquement
+spec = importlib.util.spec_from_file_location("midas_net", midas_net_path)
+midas_net = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(midas_net)
+
+# Maintenant, tu peux utiliser MidasNet_small comme ceci :
+MidasNet_small = midas_net.MidasNet_small
 from MiDaS.midas.transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
 

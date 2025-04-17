@@ -5,11 +5,12 @@ import logging
 import sys
 import os
 
-MI_DAS_PATH = os.path.join(os.path.dirname(__file__), "MiDaS")
-sys.path.insert(0, MI_DAS_PATH)
+# Obtenir le chemin absolu vers le dossier 'MiDaS'
+midas_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'MiDaS'))
+sys.path.append(midas_path)
 
-from midas.midas_net import MidasNet_small
-from midas.transforms import Resize, NormalizeImage, PrepareForNet
+from MiDaS.midas.midas_net import MidasNet_small
+from MiDaS.midas.transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
 
 logging.basicConfig(level=logging.INFO)

@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import logging
 
+s# Ajouter le dossier contenant le module midas_net_small
 sys.path.append(os.path.join(os.path.dirname(__file__), 'midas'))
 
 from midas_net_small import MidasNet_small

@@ -5,9 +5,8 @@ import logging
 import sys
 import os
 
-# Obtenir le chemin absolu vers le dossier 'MiDaS'
-midas_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'MiDaS'))
-sys.path.append(midas_path)
+MI_DAS_PATH = os.path.join(os.path.dirname(__file__), "MiDaS")
+sys.path.insert(0, MI_DAS_PATH)
 
 from MiDaS.midas.midas_net import MidasNet_small
 from MiDaS.midas.transforms import Resize, NormalizeImage, PrepareForNet

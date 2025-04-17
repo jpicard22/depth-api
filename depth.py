@@ -8,7 +8,7 @@ import os
 # Ajout du dossier midas/ au chemin d'import
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-from midas_net import MidasNet_small
+from midas_net import MidasNet
 from transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
 
@@ -21,7 +21,7 @@ def generate_depth_map(input_path, output_path):
         # ✅ modèle dans weights/ à la racine
         model_weights = os.path.join("weights", "midas_v21_small_256.pt")
 
-        model = MidasNet_small(
+        model = MidasNet(
             model_weights,
             features=64,
             backbone="efficientnet_lite3",

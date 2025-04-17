@@ -5,13 +5,16 @@ import logging
 import sys
 import os
 
+# Ajoute le dossier 'midas' (à la racine du projet) au sys.path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'midas'))
+
+# Maintenant tu peux importer les modules correctement
+from midas_net import MidasNet
+from base_model import BaseModel
+from blocks import FeatureFusionBlock
 # Ajouter le dossier parent au path
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
-from .midas.midas_net import MidasNet_small
-from .midas.transforms import Resize, NormalizeImage, PrepareForNet
+from midas.transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
-
 
 logging.basicConfig(level=logging.INFO)
 

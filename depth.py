@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import logging
 
-sys.path.append(os.path.dirname(__file__), 'midas')
+sys.path.append(os.path.join(os.path.dirname(__file__), 'midas'))
 
 from midas_net import MidasNet_small
 from midas.transforms import Resize, NormalizeImage, PrepareForNet

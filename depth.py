@@ -5,7 +5,7 @@ import logging
 import sys
 import os
 
-from midas_net import MidasNet
+from midas.midas_net_small import MidasNet_small
 from transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
 
@@ -18,7 +18,7 @@ def generate_depth_map(input_path, output_path):
         # ✅ modèle dans weights/ à la racine
         model_weights = os.path.join("weights", "midas_v21_small_256.pt")
 
-        model = MidasNet(
+        model = MidasNet_small(
             model_weights,
             features=64,
             backbone="efficientnet_lite3",

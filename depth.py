@@ -5,8 +5,7 @@ import logging
 import sys
 import os
 
-MI_DAS_PATH = os.path.join(os.path.dirname(__file__), "MiDaS")
-sys.path.insert(0, MI_DAS_PATH)
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from MiDaS.midas.midas_net import MidasNet_small
 from MiDaS.midas.transforms import Resize, NormalizeImage, PrepareForNet

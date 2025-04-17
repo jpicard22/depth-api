@@ -5,8 +5,8 @@ import logging
 import sys
 import os
 
-# Ajouter le chemin vers le dossier 'MiDaS' au path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'MiDaS')))
+MI_DAS_PATH = os.path.join(os.path.dirname(__file__), "MiDaS")
+sys.path.insert(0, MI_DAS_PATH)
 
 from midas.midas_net import MidasNet_small
 from midas.transforms import Resize, NormalizeImage, PrepareForNet

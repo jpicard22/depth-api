@@ -5,9 +5,6 @@ import logging
 import sys
 import os
 
-# Ajout du dossier midas/ au chemin d'import
-sys.path.append(os.path.join(os.path.dirname(__file__)))
-
 from midas_net import MidasNet
 from transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose

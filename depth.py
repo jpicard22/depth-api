@@ -12,6 +12,7 @@ from midas.midas_net import MidasNet_small
 from midas.transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
 
+
 logging.basicConfig(level=logging.INFO)
 
 def generate_depth_map(input_path, output_path):

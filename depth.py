@@ -8,8 +8,8 @@ import os
 # Ajouter le dossier parent au path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-from midas.midas_net import MidasNet_small
-from midas.transforms import Resize, NormalizeImage, PrepareForNet
+from .midas.midas_net import MidasNet_small
+from .midas.transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
 
 

@@ -1,9 +1,11 @@
+import sys
+import os
 import torch
 import cv2
 import numpy as np
 import logging
-import sys
-import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 'midas'))
 
 from midas.midas_net_small import MidasNet_small
 from transforms import Resize, NormalizeImage, PrepareForNet

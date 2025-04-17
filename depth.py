@@ -7,8 +7,7 @@ import logging
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'midas'))
 
-from midas.midas_net_custom import MidasNet_small
-# from midas_net import MidasNet_small
+from midas.midas_net_small import MidasNet_small
 from midas.transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
 

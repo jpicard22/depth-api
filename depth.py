@@ -5,13 +5,11 @@ import logging
 import sys
 import os
 
+# Ajout du dossier midas/ au chemin d'import
+sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-
-# Ajouter le dossier parent de 'midas' (MiDaS) au path pour que 'midas' soit trouvé comme un package
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'midas')))
-
-from midas.midas_net import MidasNet_small
-from midas.transforms import Resize, NormalizeImage, PrepareForNet
+from midas_net_custom import MidasNet_small
+from transforms import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
 
 logging.basicConfig(level=logging.INFO)
